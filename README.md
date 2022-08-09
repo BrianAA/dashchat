@@ -6,7 +6,7 @@ Dash chat is powered by one script it provides a way to parse a formatted text f
 " - " dashes to indicate message threads within a conversation allowing for options to be nested and naturally be written out.
 
 ## Getting started
-To start copy and paste the `dashchat.cs` into your project. Add it to a game object and it is ready to be used. 
+To start copy and paste the `dashchat.cs` into your project. Add it to a game object and it is ready to be used. You can use the example text file found in the repo to help you start. 
 
 ### Initializing a chat
 Generate a text file and use it as the source of the dialogue. Calling `DashChat.dash.initialize($your text file)` will start the 
