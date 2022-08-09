@@ -110,6 +110,19 @@ Hello!
 - <event.NewEnemey(Tommy)>
 ```
 
+
+## Switch actors
+When there is a need for a multiple NPC to be a part of a single text file use the `<switch.$your_actor_name>` feature. The switch feature must occur on its own line. Dashchat will emit the event to notify that a switch is needed. 
+
+```
+Hey there I am Tommy!
+<switch.Timmy>
+And I am Timmy!
+<switch.Tommy>
+How can I help you today?
+...
+```
+
 ## Questions and options
 To write out question and options simple add the `#` sign to signal a question. Then following the question must be all the options
 writte using the syntax `1.` (the number and then a period.)
