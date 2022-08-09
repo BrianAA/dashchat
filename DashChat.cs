@@ -40,8 +40,7 @@ public class DashChat : MonoBehaviour
     private static Regex regexJump = new Regex("<jump.*?>", RegexOptions.Compiled);
     private static Regex regexVariable = new Regex("<(variable.*?)>", RegexOptions.Compiled);
     private static Regex regexEvent = new Regex("<event.*?>", RegexOptions.Compiled);
-    private static Regex regexEmotion = new Regex("<emotion.*?>", RegexOptions.Compiled);
-    private static Regex regexSpeed = new Regex("<speed.*?>", RegexOptions.Compiled);
+    private static Regex regexSwitch = new Regex("<(switch.*?)>", RegexOptions.Compiled);
 
     public static DashChat dash;
     //Initialized the Dialogue manager singleton
@@ -189,7 +188,12 @@ public class DashChat : MonoBehaviour
         {
             HandleEvent(_line);
             return "event type";
-          }
+        }
+        else if (regexSwitch.IsMatch(_line))
+        {
+            HandleSwitch(_line);
+            return "switch actor";
+        }
         else if (regexJump.IsMatch(_line))
         {
             int _jumpTo = int.Parse(_line.Substring(6, _line.Length - 7));
@@ -295,6 +299,11 @@ public class DashChat : MonoBehaviour
     /// </summary>
     public static event Action<string> OnTriggerEvent;
 
+    /// <summary>
+    /// Emits when there is a character switch. 
+    /// </summary>
+    public static event Action<string> onActorSwitch;
+
 
     public void DisplayChat(string _line)
     {
@@ -336,6 +345,18 @@ public class DashChat : MonoBehaviour
         {
             string eventName = inGameEvent.ToString();
             OnTriggerEvent?.Invoke(eventName.Substring(7, eventName.Length - 8));
+        };
+        chatState = DSState.readyNext;
+        NextLine();
+    }
+    //Signals to the event manager to switch actor talking in dialogue. 
+    void HandleSwitch(string _event)
+    {
+        object _switchInfo = regexEvent.Match(_event);
+        if (_switchInfo != null)
+        {
+            string actorName = _switchInfo.ToString();
+            onActorSwitch?.Invoke(actorName.Substring(8, actorName.Length - 9));
         };
         chatState = DSState.readyNext;
         NextLine();
