@@ -1,0 +1,16 @@
+Hello there <variable.player>!
+Wonderful day we are having. 
+Listen I was wondering if you could do me a favor.
+# Would you be okay with that? 
+1. Sure thing!
+- Oh wonderful! 
+- I just need someone to deliver this package for me please
+- <event.quest(package_1)>
+- Thank you so much!
+- <end>
+2. No Sorry too busy.
+- Oh man that sucks 
+- I really needed some help today
+- I understand I get busy too!
+- Let me know when you are free! 
+- <end>
