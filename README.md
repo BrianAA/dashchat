@@ -57,8 +57,10 @@ This is the main conversation
 # This question is also part of the main convo
 1. This response is part of the main convo.
 - This is a new thread at a depth of 1. 
+- <end>
 2. This response is part of the main convo.
 - This is a new thread at a depth of 1
+- <end>
 ```
 
 
@@ -133,4 +135,27 @@ writte using the syntax `1.` (the number and then a period.)
 - Oh that is good
 2. I been better
 - Oh that sucks
+```
+
+## Ending the dialogue
+To end the dialogue the end needs to be signaled on its own line as `<end>`
+
+Example
+```
+Hey how are you?
+1. Fine
+- That is good
+- <end>
+2. Meh
+- Oh sorry to hear
+- <end>
+```
+
+Another example
+```
+This is great! 
+I can't imagine a better time to do this. 
+So I will get started
+<end>
+This line of text will not be read. 
 ```
