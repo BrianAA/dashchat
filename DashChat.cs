@@ -95,8 +95,8 @@ public class DashChat : MonoBehaviour
     {
         string _line = dialogueLines[chatIndex]; //get line of text
         string _type = "none";
-        bool _valid = validLineOfText(_line);
-        int _lineDepth = getDepth(_line);
+        bool _valid = IsValidLine(_line);
+        int _lineDepth = GetLineDepth(_line);
         if (_lineDepth == depth && _valid) //check if line is in current depth
         {
             _line = Prepare(_line); //Formats line
@@ -140,7 +140,7 @@ public class DashChat : MonoBehaviour
     /// </summary>
     /// <param name="_line"></param>
     /// <returns></returns>
-    private bool validLineOfText(string _line)
+    private bool IsValidLine(string _line)
     {
         char[] _characters = _line.ToCharArray();
         if (_characters.Length > 0)
@@ -158,7 +158,7 @@ public class DashChat : MonoBehaviour
     /// </summary>
     /// <param name="_line"></param>
     /// <returns></returns>
-    private int getDepth(string _line)
+    private int GetLineDepth(string _line)
     {
         return Regex.Matches(_line, "- ").Count; //Checks depth of line
     }
@@ -167,9 +167,9 @@ public class DashChat : MonoBehaviour
     /// Sets the depth of the line
     /// </summary>
     /// <param name="_line"></param>
-    private void SetDepth(string _line)
+    private void SetDepthByLine(string _line)
     {
-        depth = Regex.Matches(_line, "- ").Count;
+        depth = GetLineDepth(_line);
     }
 
     /// <summary>
@@ -234,7 +234,7 @@ public class DashChat : MonoBehaviour
                 for (int i = chatIndex + 1; i < dialogueLines.Length; i++) //loop through convo starting on the next line
                 {
                     string _text = dialogueLines[i];
-                    if (getDepth(_text) == depth) //check if line is in current depth
+                    if (GetLineDepth(_text) == depth) //check if line is in current depth
                     {
                         if (regexOptions.IsMatch(_text)) //check to see if its an option
                         {
@@ -276,7 +276,7 @@ public class DashChat : MonoBehaviour
     public void SelectOptions(int _key)
     {
         chatIndex = currentOptions[_key].index + 1; // Set chat index to next line after option
-        SetDepth(dialogueLines[chatIndex]); // Set Depth to new line
+        SetDepthByLine(dialogueLines[chatIndex]); // Set Depth to new line
         ChangeState(DSState.readyNext); // Set Chat state to ready next
         ReadLine();
     }
