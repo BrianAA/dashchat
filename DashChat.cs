@@ -36,6 +36,8 @@ public class DashChat : MonoBehaviour
     private static Regex regexQuestion = new Regex("# ", RegexOptions.Compiled);
     private static Regex regexFormater = new Regex("- ", RegexOptions.Compiled);
     private static Regex regexEnd = new Regex("<end>", RegexOptions.Compiled);
+    private static Regex regexLabel = new Regex("^::\\w+$", RegexOptions.Compiled);
+    private static Regex regexLabelReference = new Regex("::\\w+", RegexOptions.Compiled);
     private static Regex regexTrimmer = new Regex(@"^\s+", RegexOptions.Compiled);
     private static Regex regexJump = new Regex("<jump.*?>", RegexOptions.Compiled);
     private static Regex regexVariable = new Regex("<(variable.*?)>", RegexOptions.Compiled);
@@ -67,10 +69,10 @@ public class DashChat : MonoBehaviour
         InitializeChat(tempText); //TODO Delete
     }
 
-   /// <summary>
-   /// Initializes conversations by loading a text file
-   /// </summary>
-   /// <param name="_chatFile"></param>
+    /// <summary>
+    /// Initializes conversations by loading a text file
+    /// </summary>
+    /// <param name="_chatFile"></param>
     public void InitializeChat(TextAsset _chatFile)
     {
         depth = 0; //Set start of convo
@@ -194,15 +196,32 @@ public class DashChat : MonoBehaviour
             HandleSwitch(_line);
             return "switch actor";
         }
+        else if (regexLabel.IsMatch(_line))
+        {
+            //detected a label, skipping this line, continue outputting labelled dialog for now.
+            //TODO: Consider preventing passing through a label without jumping to it. For now prepend <end> tags to labeled sections in your text file. 
+            ChangeState(DSState.readyNext);
+            NextLine();
+
+            return "label";
+        }
         else if (regexJump.IsMatch(_line))
         {
-            int _jumpTo = int.Parse(_line.Substring(6, _line.Length - 7));
-            SetDepth(dialogueLines[_jumpTo]);
-            chatIndex = _jumpTo - 2;
-            ChangeState(DSState.readyNext);
-            Debug.Log("jumping to" + _line.Substring(6, _line.Length - 7));
-            NextLine();
-            return "jumping to" + _line.Substring(6, _line.Length - 7);
+            string _jumpStr = _line.Substring(6, _line.Length - 7);
+            int _jumpTargetLineIndex = GetJumpTargetIndex(_line, _jumpStr);
+
+            if (_jumpTargetLineIndex > -1)
+            {
+                Debug.Log($"jumping to {_jumpStr}");
+                ExecuteJump(_jumpTargetLineIndex);
+            }
+            else
+            {
+                Debug.Log($"invalid jump, ending dialog.");
+                ChangeState(DSState.end);
+            }
+
+            return "jump";
         }
         else
         {
@@ -361,4 +380,49 @@ public class DashChat : MonoBehaviour
         chatState = DSState.readyNext;
         NextLine();
     }
+
+    #region Jumping
+    private void ExecuteJump(int _jumpTargetLineIndex)
+    {
+        //Execute jump => set current chatIndex to targetLine - 1, advance chatIndex using NextLine()
+        chatIndex = _jumpTargetLineIndex - 1;
+
+        //Detect new depth
+        SetDepthByLine(dialogueLines[_jumpTargetLineIndex]);
+
+        ChangeState(DSState.readyNext);
+        NextLine();
+    }
+
+    private int GetJumpTargetIndex(string _line, string _jumpStr)
+    {
+        int _jumpTargetLineIndex = -1;
+
+        //Find jump target
+        if (int.TryParse(_jumpStr, out _jumpTargetLineIndex))
+        {
+            //TODO: Remove, reference targets using labels instead.
+            //convert text file line number to array index
+            _jumpTargetLineIndex--;
+        }
+        else if (regexLabelReference.IsMatch(_line))
+        {
+            _jumpTargetLineIndex = Array.FindIndex(
+                dialogueLines,
+                line => line == _jumpStr
+            );
+
+            if (_jumpTargetLineIndex == -1)
+            {
+                Debug.Log($"Label for {_jumpStr} not found!");
+            }
+        }
+        else
+        {
+            Debug.Log($"Jump target format {_jumpStr} not supported!");
+        }
+
+        return _jumpTargetLineIndex;
+    }
+    #endregion
 }
