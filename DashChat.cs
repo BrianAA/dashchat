@@ -321,7 +321,10 @@ public class DashChat : MonoBehaviour
     /// <summary>
     /// Emits when there is a character switch. 
     /// </summary>
-    public static event Action<string> onActorSwitch;
+    public static event Action<string> OnActorSwitch;
+
+    [Obsolete(message: "use OnActorSwitch instead!")]
+    public static event Action<string> onActorSwitch { add => OnActorSwitch += value; remove => OnActorSwitch -= value; } //TODO: Remove!
 
 
     public void DisplayChat(string _line)
@@ -375,7 +378,7 @@ public class DashChat : MonoBehaviour
         if (_switchInfo != null)
         {
             string actorName = _switchInfo.ToString();
-            onActorSwitch?.Invoke(actorName.Substring(8, actorName.Length - 9));
+            OnActorSwitch?.Invoke(actorName.Substring(8, actorName.Length - 9));
         };
         chatState = DSState.readyNext;
         NextLine();
