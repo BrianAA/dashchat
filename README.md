@@ -65,7 +65,7 @@ This is the main conversation
 
 
 ## Variables
-Variables work by embedding the following syntax within a line <variables.$your_variable> 
+Variables work by embedding the following syntax within a line: `<variables.$yourVariable>`
 you then can handle that variable in your game and return it back to the DashChat by setting the static variable
 `currentVariable` this will then replace the variable in the string and proceed to finish processing the line. 
 
@@ -81,25 +81,30 @@ DashChat.dash.currentVariable=" Player one"
 
 
 ## Jump lines
-Jump feature is a feature to allow you to break out of the threads or loop back to a previous line. 
-To use it simply add `<jump.$the_line number>` The number in the text file should be number in the jump.
+The Jump feature allows you to break out of the threads or loop back to a previous line. 
+To use it simply add a label to your text file using the following syntax `::$labelName` (Regex `/::\w+/`).
+Trigger jumps by adding `<jump.::$labelName>` to your file.
+
+It is also possible to jump to a specific line using `<jump.$theLineNumber>` The line number in the text file should be number in the jump.
+
+*Hint:* You can pass through a labeled section without jumping to it. This can be prevented by adding a line containing an `<end>` tag before the label.
 
 ``` txt
-1 Hello
-2 # How are you?
-3 1. I am okay
-4 - That is good
-5 - <jump.9>
-6 2. Meh
-7 - Oh man that sucks
-8 - <jump.9>
+1 # How are you?
+2 1. I am okay
+3 - That is good
+4 - <jump.::Continuation>
+5 2. Meh
+6 - Oh man that sucks
+7 - <jump.9>
+8 ::Continuation
 9 Anywho I was wondering something...
 ```
 
 ## Trigger Events
 To trigger events the event need to on their own line in the text file. Dashchat will not process the event as text but will 
 emit the event to notify to your event manager what event need to fire. Vairables can be used by adding `()` to the event. 
-To use simple write <event.$yourEventName($$)>
+To use simple write `<event.$yourEventName($$)>`
 
 ```
 Hello!
