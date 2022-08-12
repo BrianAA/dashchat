@@ -1,19 +1,22 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Events;
+
 [System.Serializable]
 public class Option
 {
     public string text;
     public int index;
 }
+
 [System.Serializable]
 public enum DSState { start, readyNext, processing, awaiting, end };
+
+/// <summary>
+/// This delegate defines the signature used for providing variable values.
+/// </summary>
+public delegate string DashChatVariableProvider(string variableName);
 
 public class DashChat : MonoBehaviour
 {
@@ -39,10 +42,10 @@ public class DashChat : MonoBehaviour
     private static Regex regexLabel = new Regex("^::\\w+$", RegexOptions.Compiled);
     private static Regex regexLabelReference = new Regex("::\\w+", RegexOptions.Compiled);
     private static Regex regexTrimmer = new Regex(@"^\s+", RegexOptions.Compiled);
-    private static Regex regexJump = new Regex("<jump\\..*>", RegexOptions.Compiled);
-    private static Regex regexVariable = new Regex("<(variable\\..*)>", RegexOptions.Compiled);
-    private static Regex regexEvent = new Regex("<event\\..*>", RegexOptions.Compiled);
-    private static Regex regexSwitch = new Regex("<(switch\\..*)>", RegexOptions.Compiled);
+    private static Regex regexJump = new Regex("<jump\\..+>", RegexOptions.Compiled);
+    private static Regex regexVariable = new Regex("<variable\\.(.+)>", RegexOptions.Compiled);
+    private static Regex regexEvent = new Regex("<event\\..+>", RegexOptions.Compiled);
+    private static Regex regexSwitch = new Regex("<(switch\\..+)>", RegexOptions.Compiled);
 
     //Initialized the Dialogue manager singleton
     public static DashChat instance { get; private set; }
@@ -321,6 +324,10 @@ public class DashChat : MonoBehaviour
     [Obsolete(message: "use OnActorSwitch instead!")]
     public static event Action<string> onActorSwitch { add => OnActorSwitch += value; remove => OnActorSwitch -= value; } //TODO: Remove!
 
+    /// <summary>
+    /// This method is called to fetch variable values. Set this to your VariableProvider.
+    /// </summary>
+    public static DashChatVariableProvider VariableProvider;
 
     public void DisplayChat(string _line)
     {
@@ -337,21 +344,44 @@ public class DashChat : MonoBehaviour
         chatState = changeTo;
         OnChangedState?.Invoke(changeTo);
     }
+
     //Handles variables inside of line of text
     string HandleVariable(string _variableKey)
     {
-        object match = regexVariable.Match(_variableKey);
+        Match match = regexVariable.Match(_variableKey);
+        string providedValue = string.Empty;
+        string variableName = match.Groups[1].Value;
+
+        if (VariableProvider != null)
+        {
+            providedValue = VariableProvider(variableName);
+        }
+        else if (OnLookUpVariable != null)
+        {
+            //consider passing variableName instead of full match (tag).
+            providedValue = EventBasedVariableLookup(match.ToString());
+        }
+
+        return regexVariable.Replace(_variableKey, providedValue);
+    }
+
+    [Obsolete(message: "Assign variable provider delegate to DashChat.VariableValueProvider instead.")]
+    private string EventBasedVariableLookup(string match)
+    {
+        string providedValue = string.Empty;
+
         OnLookUpVariable?.Invoke(match.ToString());
 
-        // Awaits for external variable to be provided. 
-        while (currentVariable == "")
+        while (currentVariable == string.Empty)
         {
-            // await for variable to be looked up and provided.
+            // await variable to be looked up and provided.
         }
-        // Look up variable in global variable dictionary scriptable object
-        string processString = regexVariable.Replace(_variableKey, currentVariable);
-        currentVariable = ""; //reset variable to empty
-        return processString;
+
+        providedValue = currentVariable;
+
+        currentVariable = string.Empty;
+
+        return providedValue;
     }
 
     //Signals to the event manager to trigger a event. 
