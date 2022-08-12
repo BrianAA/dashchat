@@ -36,6 +36,8 @@ public class DashChat : MonoBehaviour
     private static Regex regexQuestion = new Regex("# ", RegexOptions.Compiled);
     private static Regex regexFormater = new Regex("- ", RegexOptions.Compiled);
     private static Regex regexEnd = new Regex("<end>", RegexOptions.Compiled);
+    private static Regex regexLabel = new Regex("^::\\w+$", RegexOptions.Compiled);
+    private static Regex regexLabelReference = new Regex("::\\w+", RegexOptions.Compiled);
     private static Regex regexTrimmer = new Regex(@"^\s+", RegexOptions.Compiled);
     private static Regex regexJump = new Regex("<jump.*?>", RegexOptions.Compiled);
     private static Regex regexVariable = new Regex("<(variable.*?)>", RegexOptions.Compiled);
@@ -67,10 +69,10 @@ public class DashChat : MonoBehaviour
         InitializeChat(tempText); //TODO Delete
     }
 
-   /// <summary>
-   /// Initializes conversations by loading a text file
-   /// </summary>
-   /// <param name="_chatFile"></param>
+    /// <summary>
+    /// Initializes conversations by loading a text file
+    /// </summary>
+    /// <param name="_chatFile"></param>
     public void InitializeChat(TextAsset _chatFile)
     {
         depth = 0; //Set start of convo
@@ -93,8 +95,8 @@ public class DashChat : MonoBehaviour
     {
         string _line = dialogueLines[chatIndex]; //get line of text
         string _type = "none";
-        bool _valid = validLineOfText(_line);
-        int _lineDepth = getDepth(_line);
+        bool _valid = IsValidLine(_line);
+        int _lineDepth = GetLineDepth(_line);
         if (_lineDepth == depth && _valid) //check if line is in current depth
         {
             _line = Prepare(_line); //Formats line
@@ -138,7 +140,7 @@ public class DashChat : MonoBehaviour
     /// </summary>
     /// <param name="_line"></param>
     /// <returns></returns>
-    private bool validLineOfText(string _line)
+    private bool IsValidLine(string _line)
     {
         char[] _characters = _line.ToCharArray();
         if (_characters.Length > 0)
@@ -156,7 +158,7 @@ public class DashChat : MonoBehaviour
     /// </summary>
     /// <param name="_line"></param>
     /// <returns></returns>
-    private int getDepth(string _line)
+    private int GetLineDepth(string _line)
     {
         return Regex.Matches(_line, "- ").Count; //Checks depth of line
     }
@@ -165,9 +167,9 @@ public class DashChat : MonoBehaviour
     /// Sets the depth of the line
     /// </summary>
     /// <param name="_line"></param>
-    private void SetDepth(string _line)
+    private void SetDepthByLine(string _line)
     {
-        depth = Regex.Matches(_line, "- ").Count;
+        depth = GetLineDepth(_line);
     }
 
     /// <summary>
@@ -194,15 +196,32 @@ public class DashChat : MonoBehaviour
             HandleSwitch(_line);
             return "switch actor";
         }
+        else if (regexLabel.IsMatch(_line))
+        {
+            //detected a label, skipping this line, continue outputting labelled dialog for now.
+            //TODO: Consider preventing passing through a label without jumping to it. For now prepend <end> tags to labeled sections in your text file. 
+            ChangeState(DSState.readyNext);
+            NextLine();
+
+            return "label";
+        }
         else if (regexJump.IsMatch(_line))
         {
-            int _jumpTo = int.Parse(_line.Substring(6, _line.Length - 7));
-            SetDepth(dialogueLines[_jumpTo]);
-            chatIndex = _jumpTo - 2;
-            ChangeState(DSState.readyNext);
-            Debug.Log("jumping to" + _line.Substring(6, _line.Length - 7));
-            NextLine();
-            return "jumping to" + _line.Substring(6, _line.Length - 7);
+            string _jumpStr = _line.Substring(6, _line.Length - 7);
+            int _jumpTargetLineIndex = GetJumpTargetIndex(_line, _jumpStr);
+
+            if (_jumpTargetLineIndex > -1)
+            {
+                Debug.Log($"jumping to {_jumpStr}");
+                ExecuteJump(_jumpTargetLineIndex);
+            }
+            else
+            {
+                Debug.Log($"invalid jump, ending dialog.");
+                ChangeState(DSState.end);
+            }
+
+            return "jump";
         }
         else
         {
@@ -215,7 +234,7 @@ public class DashChat : MonoBehaviour
                 for (int i = chatIndex + 1; i < dialogueLines.Length; i++) //loop through convo starting on the next line
                 {
                     string _text = dialogueLines[i];
-                    if (getDepth(_text) == depth) //check if line is in current depth
+                    if (GetLineDepth(_text) == depth) //check if line is in current depth
                     {
                         if (regexOptions.IsMatch(_text)) //check to see if its an option
                         {
@@ -257,7 +276,7 @@ public class DashChat : MonoBehaviour
     public void SelectOptions(int _key)
     {
         chatIndex = currentOptions[_key].index + 1; // Set chat index to next line after option
-        SetDepth(dialogueLines[chatIndex]); // Set Depth to new line
+        SetDepthByLine(dialogueLines[chatIndex]); // Set Depth to new line
         ChangeState(DSState.readyNext); // Set Chat state to ready next
         ReadLine();
     }
@@ -302,7 +321,10 @@ public class DashChat : MonoBehaviour
     /// <summary>
     /// Emits when there is a character switch. 
     /// </summary>
-    public static event Action<string> onActorSwitch;
+    public static event Action<string> OnActorSwitch;
+
+    [Obsolete(message: "use OnActorSwitch instead!")]
+    public static event Action<string> onActorSwitch { add => OnActorSwitch += value; remove => OnActorSwitch -= value; } //TODO: Remove!
 
 
     public void DisplayChat(string _line)
@@ -356,9 +378,54 @@ public class DashChat : MonoBehaviour
         if (_switchInfo != null)
         {
             string actorName = _switchInfo.ToString();
-            onActorSwitch?.Invoke(actorName.Substring(8, actorName.Length - 9));
+            OnActorSwitch?.Invoke(actorName.Substring(8, actorName.Length - 9));
         };
         chatState = DSState.readyNext;
         NextLine();
     }
+
+    #region Jumping
+    private void ExecuteJump(int _jumpTargetLineIndex)
+    {
+        //Execute jump => set current chatIndex to targetLine - 1, advance chatIndex using NextLine()
+        chatIndex = _jumpTargetLineIndex - 1;
+
+        //Detect new depth
+        SetDepthByLine(dialogueLines[_jumpTargetLineIndex]);
+
+        ChangeState(DSState.readyNext);
+        NextLine();
+    }
+
+    private int GetJumpTargetIndex(string _line, string _jumpStr)
+    {
+        int _jumpTargetLineIndex = -1;
+
+        //Find jump target
+        if (int.TryParse(_jumpStr, out _jumpTargetLineIndex))
+        {
+            //TODO: Remove, reference targets using labels instead.
+            //convert text file line number to array index
+            _jumpTargetLineIndex--;
+        }
+        else if (regexLabelReference.IsMatch(_line))
+        {
+            _jumpTargetLineIndex = Array.FindIndex(
+                dialogueLines,
+                line => line == _jumpStr
+            );
+
+            if (_jumpTargetLineIndex == -1)
+            {
+                Debug.Log($"Label for {_jumpStr} not found!");
+            }
+        }
+        else
+        {
+            Debug.Log($"Jump target format {_jumpStr} not supported!");
+        }
+
+        return _jumpTargetLineIndex;
+    }
+    #endregion
 }
