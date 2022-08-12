@@ -32,7 +32,6 @@ public class DashChat : MonoBehaviour
     public int depth = 0;
 
     //Cache regex for performance
-    //Cache regex for performance
     private static Regex regexOptions = new Regex("[0-9]. ", RegexOptions.Compiled);
     private static Regex regexQuestion = new Regex("# ", RegexOptions.Compiled);
     private static Regex regexFormater = new Regex("- ", RegexOptions.Compiled);
@@ -45,29 +44,24 @@ public class DashChat : MonoBehaviour
     private static Regex regexEvent = new Regex("<event\\..*>", RegexOptions.Compiled);
     private static Regex regexSwitch = new Regex("<(switch\\..*)>", RegexOptions.Compiled);
 
-    public static DashChat dash;
     //Initialized the Dialogue manager singleton
-    public static DashChat instance
-    {
-        get
-        {
-            if (!dash)
-            {
-                dash = FindObjectOfType(typeof(DashChat)) as DashChat;
-                if (!dash)
-                {
-                    Debug.LogError("You need at least 1 active DashChat script");
-                }
-            }
-            return dash;
-        }
-    }
+    public static DashChat instance { get; private set; }
+    
     // Start is called before the first frame update
     void Awake()
     {
-        dash = GetComponent<DashChat>();
-        depth = 0;
-        InitializeChat(tempText); //TODO Delete
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(this.gameObject);
+
+            depth = 0;
+            InitializeChat(tempText); //TODO Delete
+        }
+        else
+        {
+            Destroy(this);
+        }
     }
 
     /// <summary>
