@@ -32,6 +32,7 @@ public class DashChat : MonoBehaviour
     public int depth = 0;
 
     //Cache regex for performance
+    //Cache regex for performance
     private static Regex regexOptions = new Regex("[0-9]. ", RegexOptions.Compiled);
     private static Regex regexQuestion = new Regex("# ", RegexOptions.Compiled);
     private static Regex regexFormater = new Regex("- ", RegexOptions.Compiled);
@@ -39,10 +40,10 @@ public class DashChat : MonoBehaviour
     private static Regex regexLabel = new Regex("^::\\w+$", RegexOptions.Compiled);
     private static Regex regexLabelReference = new Regex("::\\w+", RegexOptions.Compiled);
     private static Regex regexTrimmer = new Regex(@"^\s+", RegexOptions.Compiled);
-    private static Regex regexJump = new Regex("<jump.*?>", RegexOptions.Compiled);
-    private static Regex regexVariable = new Regex("<(variable.*?)>", RegexOptions.Compiled);
-    private static Regex regexEvent = new Regex("<event.*?>", RegexOptions.Compiled);
-    private static Regex regexSwitch = new Regex("<(switch.*?)>", RegexOptions.Compiled);
+    private static Regex regexJump = new Regex("<jump\\..*>", RegexOptions.Compiled);
+    private static Regex regexVariable = new Regex("<(variable\\..*)>", RegexOptions.Compiled);
+    private static Regex regexEvent = new Regex("<event\\..*>", RegexOptions.Compiled);
+    private static Regex regexSwitch = new Regex("<(switch\\..*)>", RegexOptions.Compiled);
 
     public static DashChat dash;
     //Initialized the Dialogue manager singleton
