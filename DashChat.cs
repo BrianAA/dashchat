@@ -1,19 +1,22 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Events;
+
 [System.Serializable]
 public class Option
 {
     public string text;
     public int index;
 }
+
 [System.Serializable]
 public enum DSState { start, readyNext, processing, awaiting, end };
+
+/// <summary>
+/// This delegate defines the signature used for providing variable values.
+/// </summary>
+public delegate string DashChatVariableProvider(string variableName);
 
 public class DashChat : MonoBehaviour
 {
@@ -26,7 +29,6 @@ public class DashChat : MonoBehaviour
 
 
     public List<Option> currentOptions = new List<Option>();
-    public static string currentVariable;
     public int chatIndex;
 
     public int depth = 0;
@@ -39,34 +41,29 @@ public class DashChat : MonoBehaviour
     private static Regex regexLabel = new Regex("^::\\w+$", RegexOptions.Compiled);
     private static Regex regexLabelReference = new Regex("::\\w+", RegexOptions.Compiled);
     private static Regex regexTrimmer = new Regex(@"^\s+", RegexOptions.Compiled);
-    private static Regex regexJump = new Regex("<jump.*?>", RegexOptions.Compiled);
-    private static Regex regexVariable = new Regex("<(variable.*?)>", RegexOptions.Compiled);
-    private static Regex regexEvent = new Regex("<event.*?>", RegexOptions.Compiled);
-    private static Regex regexSwitch = new Regex("<(switch.*?)>", RegexOptions.Compiled);
+    private static Regex regexJump = new Regex("<jump\\..+>", RegexOptions.Compiled);
+    private static Regex regexVariable = new Regex("<variable\\.(.+)>", RegexOptions.Compiled);
+    private static Regex regexEvent = new Regex("<event\\..+>", RegexOptions.Compiled);
+    private static Regex regexSwitch = new Regex("<(switch\\..+)>", RegexOptions.Compiled);
 
-    public static DashChat dash;
     //Initialized the Dialogue manager singleton
-    public static DashChat instance
-    {
-        get
-        {
-            if (!dash)
-            {
-                dash = FindObjectOfType(typeof(DashChat)) as DashChat;
-                if (!dash)
-                {
-                    Debug.LogError("You need at least 1 active DashChat script");
-                }
-            }
-            return dash;
-        }
-    }
+    public static DashChat instance { get; private set; }
+    
     // Start is called before the first frame update
     void Awake()
     {
-        dash = GetComponent<DashChat>();
-        depth = 0;
-        InitializeChat(tempText); //TODO Delete
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(this.gameObject);
+
+            depth = 0;
+            InitializeChat(tempText); //TODO Delete
+        }
+        else
+        {
+            Destroy(this);
+        }
     }
 
     /// <summary>
@@ -281,7 +278,6 @@ public class DashChat : MonoBehaviour
         ReadLine();
     }
 
-
     // Action Events
     /// <summary>
     /// Emits when a new line is being read
@@ -323,9 +319,10 @@ public class DashChat : MonoBehaviour
     /// </summary>
     public static event Action<string> OnActorSwitch;
 
-    [Obsolete(message: "use OnActorSwitch instead!")]
-    public static event Action<string> onActorSwitch { add => OnActorSwitch += value; remove => OnActorSwitch -= value; } //TODO: Remove!
-
+    /// <summary>
+    /// This method is called to fetch variable values. Set this to your VariableProvider.
+    /// </summary>
+    public static DashChatVariableProvider VariableProvider;
 
     public void DisplayChat(string _line)
     {
@@ -342,21 +339,24 @@ public class DashChat : MonoBehaviour
         chatState = changeTo;
         OnChangedState?.Invoke(changeTo);
     }
+
     //Handles variables inside of line of text
     string HandleVariable(string _variableKey)
     {
-        object match = regexVariable.Match(_variableKey);
-        OnLookUpVariable?.Invoke(match.ToString());
+        Match match = regexVariable.Match(_variableKey);
+        string providedValue = string.Empty;
+        string variableName = match.Groups[1].Value;
 
-        // Awaits for external variable to be provided. 
-        while (currentVariable == "")
+        if (VariableProvider != null)
         {
-            // await for variable to be looked up and provided.
+            providedValue = VariableProvider(variableName);
         }
-        // Look up variable in global variable dictionary scriptable object
-        string processString = regexVariable.Replace(_variableKey, currentVariable);
-        currentVariable = ""; //reset variable to empty
-        return processString;
+        else
+        {
+            Debug.LogWarning("No VariableProvider defined.");
+        }
+
+        return regexVariable.Replace(_variableKey, providedValue);
     }
 
     //Signals to the event manager to trigger a event. 
@@ -371,6 +371,7 @@ public class DashChat : MonoBehaviour
         chatState = DSState.readyNext;
         NextLine();
     }
+
     //Signals to the event manager to switch actor talking in dialogue. 
     void HandleSwitch(string _event)
     {

@@ -9,8 +9,8 @@ Dash chat is powered by one script it provides a way to parse a formatted text f
 To start copy and paste the `dashchat.cs` into your project. Add it to a game object and it is ready to be used. You can use the example text file found in the repo to help you start. 
 
 ### Initializing a chat
-Generate a text file and use it as the source of the dialogue. Calling `DashChat.dash.initialize($your text file)` will start the 
-dialogue and Dash chat will being to parse it out. 
+Generate a text file and use it as the source of the dialogue. Start the dialogue by invoking `DashChat.instance.InitializeChat($your text file)`.
+
 ``` c#
  public void InitializeChat(TextAsset _chatFile)
     {
@@ -31,14 +31,14 @@ dialogue and Dash chat will being to parse it out.
 
 
 ### Reading the next line
-Reading the next line in the file can be controlled by invoking `NextLine()` in dashchat. Here is an example on how to trigger 
-Dashchat to read the next line. Ideally this should be controlled via the ui or a input manager
+Reading the next line in the file can be requested by invoking `DashChat.instance.NextLine()`. Here is an example on how to trigger 
+Dashchat to read the next line. Ideally this should be controlled via the ui or an input manager
 
 ``` c#
     private void Update()
     {
-        if(Input.GetKeyDown(KeyCode.Space) && DashChat.dash.chatState==DSState.readyNext){ 
-            DashChat.dash.NextLine();
+        if(Input.GetKeyDown(KeyCode.Space) && DashChat.instance.chatState==DSState.readyNext){ 
+            DashChat.instance.NextLine();
         }
     }
 ```
@@ -48,8 +48,8 @@ Dashchat to read the next line. Ideally this should be controlled via the ui or 
 # Formatting & Features
 
 ## Dash format
-The main formatting of the text file is the dash. This helps DashChat know what is the current depth of the conversation and not 
-worry about conversations that are happening within a thread. When a conversation is moved in to a thread the depth will increase
+The main formatting of the text file is the dash. This helps DashChat know the current depth of the conversation and not 
+worry about lines that are outside of the current thread. When a conversation is moved in to a thread the depth will increase
 by one int. 
 
 ```
@@ -65,29 +65,38 @@ This is the main conversation
 
 
 ## Variables
-Variables work by embedding the following syntax within a line: `<variables.$yourVariable>`
-you then can handle that variable in your game and return it back to the DashChat by setting the static variable
-`currentVariable` this will then replace the variable in the string and proceed to finish processing the line. 
+Variables work by embedding the following syntax within a line: `<variables.$yourVariable>`.
 
-Eample
+Create your own provision method and assign it to `DashChat.VariableProvider`.
+
+Example
 ```
 Hello <variable.playerName>!
 ```
-The event `onLookUpVariable` will emit and notify your variable handler to provide `currentVariable` to DashChat. 
 
 ``` C#
-DashChat.dash.currentVariable=" Player one"
+DashChat.VariableProvider = (string variableName) => {
+    if(variableName == "playerName"){
+        return "Player One";
+    }
+    ...
+    else {
+        return dict[variableName];
+    }
+}
 ```
 
 
 ## Jump lines
-The Jump feature allows you to break out of the threads or loop back to a previous line. 
+The Jump feature allows you to break out of the thread or loop back to a previous line. 
 To use it simply add a label to your text file using the following syntax `::$labelName` (Regex `/::\w+/`).
-Trigger jumps by adding `<jump.::$labelName>` to your file.
+Trigger jumps by adding a `<jump.::$labelName>` line to your file.
 
 It is also possible to jump to a specific line using `<jump.$theLineNumber>` The line number in the text file should be number in the jump.
 
 *Hint:* You can pass through a labeled section without jumping to it. This can be prevented by adding a line containing an `<end>` tag before the label.
+
+Example
 
 ``` txt
 1 # How are you?
@@ -102,10 +111,11 @@ It is also possible to jump to a specific line using `<jump.$theLineNumber>` The
 ```
 
 ## Trigger Events
-To trigger events the event need to on their own line in the text file. Dashchat will not process the event as text but will 
-emit the event to notify to your event manager what event need to fire. Vairables can be used by adding `()` to the event. 
-To use simple write `<event.$yourEventName($$)>`
 
+Trigger events by adding an event line like so: `<event.$yourEventName($$)>`
+Dashchat will emit the `OnTriggerEvent` to notify your event manager about the request. Variables can be used by adding `()` to the event. 
+
+Example
 ```
 Hello!
 # Guess what?
@@ -119,8 +129,9 @@ Hello!
 
 
 ## Switch actors
-When there is a need for a multiple NPC to be a part of a single text file use the `<switch.$your_actor_name>` feature. The switch feature must occur on its own line. Dashchat will emit the event to notify that a switch is needed. 
+When there is the need for multiple NPCs to be part of a single text file, use the `<switch.$your_actor_name>` tag. The switch tag must occur on its own line. Dashchat will emit the `OnActorSwitch` event to notify that a switch was requested. 
 
+Example
 ```
 Hey there I am Tommy!
 <switch.Timmy>
@@ -131,9 +142,13 @@ How can I help you today?
 ```
 
 ## Questions and options
-To write out question and options simple add the `#` sign to signal a question. Then following the question must be all the options
-writte using the syntax `1.` (the number and then a period.)
+To write out question and options simply add the `#` sign to signal a question. 
 
+After defining a question, provide options using this syntax: `1.` (the number and then a period.)
+
+Define the resulting dialog by adding lines with a greater depth between the defined options.
+
+Example
 ```
 # Hello how are you?
 1. I am okay
@@ -143,7 +158,7 @@ writte using the syntax `1.` (the number and then a period.)
 ```
 
 ## Ending the dialogue
-To end the dialogue the end needs to be signaled on its own line as `<end>`
+End the dialog by adding a line containing the `<end>` tag.
 
 Example
 ```

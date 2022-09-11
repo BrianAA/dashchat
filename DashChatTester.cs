@@ -31,17 +31,25 @@ public class DashChatTester : MonoBehaviour
         }
         //TODO: Add options 3..9?
     }
-    
     private void OnEnable()
     {
         dashChat = DashChat.instance;
         SubscribeDashChatEvents();
+        DashChat.VariableProvider = ProvideVariableValue;
         dashChat.InitializeChat(demoText);
     }
-    
+
+    private string ProvideVariableValue(string variableName)
+    {
+        Output($"variable lookup: {variableName}");
+
+        return $"DemoVariable:{variableName}";
+    }
+
     private void OnDisable()
     {
         UnsubscribeDashChatEvents();
+        DashChat.VariableProvider = null;
     }
 
     private void SubscribeDashChatEvents()
@@ -51,7 +59,6 @@ public class DashChatTester : MonoBehaviour
         DashChat.OnDisplayChat += DashChat_OnDisplayChat;
         DashChat.OnDisplayOptions += DashChat_OnDisplayOptions;
         DashChat.OnTriggerEvent += DashChat_OnTriggerEvent;
-        DashChat.OnLookUpVariable += DashChat_OnLookUpVariable;
         DashChat.OnChangedState += DashChat_OnChangedState;
         DashChat.OnActorSwitch += DashChat_OnActorSwitch;
     }
@@ -63,7 +70,6 @@ public class DashChatTester : MonoBehaviour
         DashChat.OnDisplayChat -= DashChat_OnDisplayChat;
         DashChat.OnDisplayOptions -= DashChat_OnDisplayOptions;
         DashChat.OnTriggerEvent -= DashChat_OnTriggerEvent;
-        DashChat.OnLookUpVariable -= DashChat_OnLookUpVariable;
         DashChat.OnChangedState -= DashChat_OnChangedState;
         DashChat.OnActorSwitch -= DashChat_OnActorSwitch;
     }
@@ -79,7 +85,6 @@ public class DashChatTester : MonoBehaviour
 
         Output($"options: {string.Join(Environment.NewLine, optionStrings)}");
     }
-    
     private void DashChat_OnDisplayChat(string obj)
     {
         Output($"text: {obj}");
@@ -93,13 +98,6 @@ public class DashChatTester : MonoBehaviour
     private void DashChat_OnChangedState(DSState obj)
     {
         Output($"changed state to {obj}");
-    }
-
-    private void DashChat_OnLookUpVariable(string obj)
-    {
-        Output($"triggered variable lookup: {obj}");
-
-        DashChat.currentVariable = $"DemoVariable:{obj}";
     }
 
     private void DashChat_OnTriggerEvent(string obj)
