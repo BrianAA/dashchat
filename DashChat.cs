@@ -29,7 +29,6 @@ public class DashChat : MonoBehaviour
 
 
     public List<Option> currentOptions = new List<Option>();
-    public static string currentVariable;
     public int chatIndex;
 
     public int depth = 0;
@@ -279,7 +278,6 @@ public class DashChat : MonoBehaviour
         ReadLine();
     }
 
-
     // Action Events
     /// <summary>
     /// Emits when a new line is being read
@@ -321,9 +319,6 @@ public class DashChat : MonoBehaviour
     /// </summary>
     public static event Action<string> OnActorSwitch;
 
-    [Obsolete(message: "use OnActorSwitch instead!")]
-    public static event Action<string> onActorSwitch { add => OnActorSwitch += value; remove => OnActorSwitch -= value; } //TODO: Remove!
-
     /// <summary>
     /// This method is called to fetch variable values. Set this to your VariableProvider.
     /// </summary>
@@ -356,32 +351,12 @@ public class DashChat : MonoBehaviour
         {
             providedValue = VariableProvider(variableName);
         }
-        else if (OnLookUpVariable != null)
+        else
         {
-            //consider passing variableName instead of full match (tag).
-            providedValue = EventBasedVariableLookup(match.ToString());
+            Debug.LogWarning("No VariableProvider defined.");
         }
 
         return regexVariable.Replace(_variableKey, providedValue);
-    }
-
-    [Obsolete(message: "Assign variable provider delegate to DashChat.VariableValueProvider instead.")]
-    private string EventBasedVariableLookup(string match)
-    {
-        string providedValue = string.Empty;
-
-        OnLookUpVariable?.Invoke(match.ToString());
-
-        while (currentVariable == string.Empty)
-        {
-            // await variable to be looked up and provided.
-        }
-
-        providedValue = currentVariable;
-
-        currentVariable = string.Empty;
-
-        return providedValue;
     }
 
     //Signals to the event manager to trigger a event. 
@@ -396,6 +371,7 @@ public class DashChat : MonoBehaviour
         chatState = DSState.readyNext;
         NextLine();
     }
+
     //Signals to the event manager to switch actor talking in dialogue. 
     void HandleSwitch(string _event)
     {
